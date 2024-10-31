@@ -35,7 +35,6 @@ import app.revanced.patches.youtube.utils.fingerprints.ScrollTopParentFingerprin
 import app.revanced.patches.youtube.utils.integrations.Constants.COMPONENTS_PATH
 import app.revanced.patches.youtube.utils.integrations.Constants.FEED_CLASS_DESCRIPTOR
 import app.revanced.patches.youtube.utils.integrations.Constants.FEED_PATH
-import app.revanced.patches.youtube.utils.mainactivity.MainActivityResolvePatch
 import app.revanced.patches.youtube.utils.navigation.NavigationBarHookPatch
 import app.revanced.patches.youtube.utils.playertype.PlayerTypeHookPatch
 import app.revanced.patches.youtube.utils.resourceid.SharedResourceIdPatch
@@ -63,7 +62,6 @@ import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
-import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import com.android.tools.smali.dexlib2.util.MethodUtil
 
 @Suppress("unused")
@@ -72,7 +70,6 @@ object FeedComponentsPatch : BaseBytecodePatch(
     description = "Adds options to hide components related to feeds.",
     dependencies = setOf(
         LithoFilterPatch::class,
-        MainActivityResolvePatch::class,
         NavigationBarHookPatch::class,
         PlayerTypeHookPatch::class,
         SettingsPatch::class,
@@ -173,27 +170,6 @@ object FeedComponentsPatch : BaseBytecodePatch(
             addInstruction(
                 targetIndex + 1,
                 "invoke-static {v$targetRegister}, $FEED_CLASS_DESCRIPTOR->hideCaptionsButtonContainer(Landroid/view/View;)V"
-            )
-        }
-
-        // endregion
-
-        // region patch for hide floating button
-
-        MainActivityResolvePatch.onCreateMethod.apply {
-            val fabIndex = indexOfFirstInstructionOrThrow {
-                opcode == Opcode.CONST_STRING &&
-                        getReference<StringReference>()?.string == "fab"
-            }
-            val fabRegister = getInstruction<OneRegisterInstruction>(fabIndex).registerA
-            val jumpIndex = indexOfFirstInstructionOrThrow(fabIndex + 1, Opcode.CONST_STRING)
-
-            addInstructionsWithLabels(
-                fabIndex, """
-                    invoke-static {}, $FEED_CLASS_DESCRIPTOR->hideFloatingButton()Z
-                    move-result v$fabRegister
-                    if-nez v$fabRegister, :hide
-                    """, ExternalLabel("hide", getInstruction(jumpIndex))
             )
         }
 
